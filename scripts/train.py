@@ -9,6 +9,7 @@ Examples:
     python3 scripts/train.py baseline 1
     python3 scripts/train.py dendritic 1 10    (only 10% of the training images)
 '''
+import copy
 import sys
 from pathlib import Path
 
@@ -49,22 +50,31 @@ def main():
     torch.manual_seed(seed)
 
     # 3. Training
+    # The model of the epoch with the highest validation accuracy is kept,
+    # so later epochs where the network starts to memorize the training images are not used.
     history = []
+    best_accuracy, best_epoch = 0, 0
     for epoch in range(1, n_epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, device)
         validation = evaluate(model, validation_loader, device)
         history.append({'epoch': epoch, 'train_loss': round(train_loss, 4), 'validation_accuracy': round(validation['accuracy'], 4)})
         print(f"Epoch {epoch:3d} | train loss {train_loss:.3f} | validation accuracy {validation['accuracy']:.3f}")
 
-    # 4. Final evaluation on the test set
+        if validation['accuracy'] > best_accuracy:
+            best_accuracy, best_epoch = validation['accuracy'], epoch
+            best_weights = copy.deepcopy(model.state_dict())
+
+    # 4. Final evaluation of the best model on the test set
+    model.load_state_dict(best_weights)
     test = evaluate(model, test_loader, device)
     print()
+    print(f"Best epoch:             {best_epoch} (validation accuracy {best_accuracy:.3f})")
     print(f"Test accuracy:          {test['accuracy']:.3f}")
     print(f"Test balanced accuracy: {test['balanced_accuracy']:.3f}")
 
     # 5. Save results and the trained model
     run_info = {'model': model_name, 'train_percent': train_percent, 'seed': seed, 'n_epochs': n_epochs,
-                'learning_rate': LEARNING_RATE, 'n_parameters': n_parameters}
+                'best_epoch': best_epoch, 'learning_rate': LEARNING_RATE, 'n_parameters': n_parameters}
     save_run_results(project_root/'results/tables', run_info, history, test)
 
     models_directory = project_root/'results/models'

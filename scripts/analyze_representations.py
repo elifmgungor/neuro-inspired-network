@@ -73,9 +73,9 @@ def main():
         pd.DataFrame(means, index=CLASSES).to_csv(tables_directory/f'{run_name}_class_means.csv')
 
         rows.append({'model': run['model'], 'seed': run['seed'],
-                     'active_fraction': round((activations > 0).mean(), 4),
-                     'dead_fraction': round((activations.max(axis=0) == 0).mean(), 4),
-                     'class_selectivity': round(class_selectivity(means), 4)})
+                     'active_fraction': round(float((activations > 0).mean()), 4),
+                     'dead_fraction': round(float((activations.max(axis=0) == 0).mean()), 4),
+                     'class_selectivity': round(float(class_selectivity(means)), 4)})
 
     # 2. Compare the representational geometry of every model with the baseline of the same seed
     for row in rows:
@@ -84,7 +84,7 @@ def main():
             row['rdm_similarity_to_baseline'] = np.nan
         else:
             own = class_means[(row['model'], row['seed'])]
-            row['rdm_similarity_to_baseline'] = round(rdm_similarity(representational_dissimilarity(own), representational_dissimilarity(baseline)), 4)
+            row['rdm_similarity_to_baseline'] = round(float(rdm_similarity(representational_dissimilarity(own), representational_dissimilarity(baseline))), 4)
         print(row)
 
     update_table(tables_directory/'representations.csv', rows, ['model', 'seed'])

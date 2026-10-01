@@ -64,6 +64,7 @@ All models share the same CNN (two convolution blocks → hidden layer of 128 ne
 | Noise robustness | Gaussian noise added to the test images | `evaluate_noise.py` |
 | Representations | hidden-layer activity on the test images | `analyze_representations.py` |
 
+- **Model selection:** in every run, the weights of the epoch with the highest validation accuracy are kept and evaluated on the test set (`best_epoch` in `summary.csv`). This avoids using epochs where the network has started to memorize the training images. The test set is never used for this choice.
 - **Fewer labels:** with fewer images the number of epochs is increased (e.g. 150 epochs for 10%), so every run makes the same number of weight updates. The validation and test sets never change.
 - **Noise robustness:** noise standard deviation 0, 0.25, 0.5, 1.0 and 1.5 × the pixel standard deviation. The same noise is used for every model.
 - **Representations:**

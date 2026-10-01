@@ -137,7 +137,8 @@ def plot_class_rdms(summary):
         class_means = pd.read_csv(TABLES_DIRECTORY/f'{first_seed_run_name(summary, model)}_class_means.csv', index_col=0)
         image = ax.imshow(1 - np.corrcoef(class_means.values), cmap='Blues', vmin=0, vmax=2)
         ax.set_xticks(range(len(class_means)), class_means.index, rotation=90, fontsize=7)
-        ax.set_yticks(range(len(class_means)), class_means.index, fontsize=7)
+        # Class names on the y axis only in the first panel, so they do not overlap the next panel
+        ax.set_yticks(range(len(class_means)), class_means.index if model == models[0] else [], fontsize=7)
         ax.set_title(model)
     fig.colorbar(image, ax=axes[0].tolist(), shrink=0.8, label='1 - correlation')
     fig.savefig(FIGURES_DIRECTORY/'class_rdms.png', dpi=300, bbox_inches='tight')

@@ -33,7 +33,7 @@ def save_run_results(tables_directory, run_info, history, test):
     Save the results of one training run.
     Parameters:
         - tables_directory: Folder where the CSV files are written (results/tables).
-        - run_info: Dictionary describing the run (model, train_percent, seed, n_epochs, learning_rate, n_parameters).
+        - run_info: Dictionary describing the run (model, train_percent, seed, n_epochs, best_epoch, learning_rate, n_parameters).
         - history: List of dictionaries with the training loss and validation accuracy of each epoch.
         - test: Output of evaluate() on the test set.
     '''
