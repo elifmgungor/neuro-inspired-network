@@ -22,9 +22,11 @@ from neuroinspired.models import MLP_MODELS, build_model
 from neuroinspired.training import train_one_epoch, evaluate
 from neuroinspired.results import get_run_name, save_run_results
 
-# Epochs on the full training set: 15 for the CNN models,
-# 50 for the MLP models (as used for CIFAR-10 by Chavlis & Poirazi, 2025)
-N_EPOCHS_CNN = 15
+# Maximum epochs on the full training set: 30 for the CNN models,
+# 50 for the MLP models (as used for CIFAR-10 by Chavlis & Poirazi, 2025).
+# The best-validation epoch is used, so a model that peaks early gives the same result
+# as with fewer epochs; models with few parameters (e.g. *_sparse) need the extra epochs.
+N_EPOCHS_CNN = 30
 N_EPOCHS_MLP = 50
 LEARNING_RATE = 1e-3
 

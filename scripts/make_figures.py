@@ -144,6 +144,50 @@ def plot_class_rdms(summary):
     fig.savefig(FIGURES_DIRECTORY/'class_rdms.png', dpi=300, bbox_inches='tight')
     plt.close(fig)
 
+def plot_dendrite_study(summary):
+    '''
+    Part 2: restricted sampling vs branch nonlinearity.
+    One panel per setting; each seed as a small dot, mean ± standard deviation as a large marker.
+    Colors follow the other figures: standard neuron blue, linear branches orange, nonlinear branches green.
+    '''
+    standard = MODEL_STYLES['baseline']['color']
+    linear = MODEL_STYLES['linear_branches']['color']
+    nonlinear = MODEL_STYLES['dendritic']['color']
+
+    # (panel title, train_percent, [(x label, model, color), ...])
+    panels = [
+        ('CNN, 100% of training images', 100, [
+            ('standard', 'baseline', standard),
+            ('all inputs\nlinear', 'linear_branches', linear), ('all inputs\nnonlinear', 'dendritic', nonlinear),
+            ('16 inputs\nlinear', 'linear_branches_sparse', linear), ('16 inputs\nnonlinear', 'dendritic_sparse', nonlinear)]),
+        ('CNN, 10% of training images', 10, [
+            ('standard', 'baseline', standard),
+            ('all inputs\nlinear', 'linear_branches', linear), ('all inputs\nnonlinear', 'dendritic', nonlinear),
+            ('16 inputs\nlinear', 'linear_branches_sparse', linear), ('16 inputs\nnonlinear', 'dendritic_sparse', nonlinear)]),
+        ('MLP on pixels, 100%', 100, [
+            ('fully\nconnected', 'mlp_vanilla', standard),
+            ('16 inputs\nlinear', 'mlp_linear_branches_sparse', linear), ('16 inputs\nnonlinear', 'mlp_dendritic_sparse', nonlinear)]),
+    ]
+    if not set(['dendritic_sparse', 'mlp_dendritic_sparse']) <= set(summary['model']):
+        return
+
+    fig, axes = plt.subplots(1, len(panels), figsize=(14, 4.8), gridspec_kw={'width_ratios': [5, 5, 3]})
+    for ax, (title, train_percent, bars) in zip(axes, panels):
+        for i, (label, model, color) in enumerate(bars):
+            accuracy = summary[(summary['model'] == model) & (summary['train_percent'] == train_percent)]['test_accuracy']
+            if len(accuracy) == 0:
+                continue
+            ax.scatter(np.full(len(accuracy), i + 0.18), accuracy, color=color, s=15, alpha=0.6)
+            ax.errorbar(i, accuracy.mean(), yerr=accuracy.std() if len(accuracy) > 1 else 0,
+                        color=color, marker='o', markersize=8, capsize=4, linewidth=2)
+        ax.set_xticks(range(len(bars)), [label for label, _, _ in bars], fontsize=8)
+        ax.set_xlim(-0.6, len(bars) - 0.4)
+        ax.set_title(title, fontsize=11)
+        style_axis(ax)
+    axes[0].set_ylabel('Test accuracy')
+    fig.suptitle('Where does the dendritic effect come from? (blue: standard, orange: linear branches, green: nonlinear branches)', fontsize=11)
+    save(fig, 'dendrite_study.png')
+
 def main():
     FIGURES_DIRECTORY.mkdir(parents=True, exist_ok=True)
     summary = pd.read_csv(TABLES_DIRECTORY/'summary.csv')
@@ -169,6 +213,9 @@ def main():
 
     # 4. Hidden-layer representations
     plot_class_rdms(summary)
+
+    # 5. Part 2: where does the dendritic effect come from?
+    plot_dendrite_study(summary)
 
     print('Figures saved to', FIGURES_DIRECTORY)
 

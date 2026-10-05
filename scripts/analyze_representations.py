@@ -72,10 +72,16 @@ def main():
         class_means[(run['model'], run['seed'])] = means
         pd.DataFrame(means, index=CLASSES).to_csv(tables_directory/f'{run_name}_class_means.csv')
 
+        # Activity measures use only the positive part of the activations:
+        # the MLP models use LeakyReLU, which also gives small negative values,
+        # while the selectivity index assumes activity >= 0 (no change for the CNN models, which use ReLU).
+        positive = np.maximum(activations, 0)
+        positive_means = np.array([positive[labels == c].mean(axis=0) for c in range(len(CLASSES))])
+
         rows.append({'model': run['model'], 'seed': run['seed'],
-                     'active_fraction': round(float((activations > 0).mean()), 4),
-                     'dead_fraction': round(float((activations.max(axis=0) == 0).mean()), 4),
-                     'class_selectivity': round(float(class_selectivity(means)), 4)})
+                     'active_fraction': round(float((positive > 0).mean()), 4),
+                     'dead_fraction': round(float((positive.max(axis=0) == 0).mean()), 4),
+                     'class_selectivity': round(float(class_selectivity(positive_means)), 4)})
 
     # 2. Compare the representational geometry of every model with the baseline of the same seed
     #    (CNN models with 'baseline', MLP models with 'mlp_vanilla')

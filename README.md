@@ -116,7 +116,8 @@ Any other comparison is exploratory.
 ### Methods shared by all experiments
 
 - **Model selection:** in every run, the weights of the epoch with the highest validation accuracy are evaluated on the test set (`best_epoch` in `summary.csv`). The test set is never used for this choice.
-- **Fewer labels:** with fewer images the number of epochs is increased (e.g. 150 epochs for 10%), so every run makes the same number of weight updates. The validation and test sets never change.
+- **Training length:** the first CNN runs used at most 15 epochs on the full training set. Some runs (all `*_sparse` models and a few runs with 50% of the images) reached their best validation accuracy in the last epochs, so the maximum was raised to 30. Because the best-validation epoch is used and training is deterministic, a longer maximum only changes runs that still improve after the old maximum.
+- **Fewer labels:** with fewer images the number of epochs is increased (30 × 100 / percent, e.g. 300 epochs for 10%), so every run makes the same number of weight updates. The validation and test sets never change.
 - **Paired comparisons:** models trained with the same seed share the data split, data order and (for CNNs) initial convolution weights, so they are compared seed by seed.
 - **Noise robustness:** Gaussian noise of 0, 0.25, 0.5, 1.0 and 1.5 × the pixel standard deviation added to the test images; the same noise for every model.
 - **Representations:** fraction of active units, fraction of units never active, class selectivity (Morcos et al., 2018), and similarity of the class-by-class representational geometry to the reference model with the same seed (representational similarity analysis, Kriegeskorte, Mur & Bandettini, 2008).
@@ -125,7 +126,7 @@ Any other comparison is exploratory.
 
 | Parameter | Value |
 |---|---:|
-| Epochs, full training set | 15 (CNN), 50 (MLP) |
+| Maximum epochs, full training set | 30 (CNN), 50 (MLP) |
 | Optimizer | Adam |
 | Learning rate | 0.001 |
 | Batch size | 128 |
