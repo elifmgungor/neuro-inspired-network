@@ -31,6 +31,13 @@ In this project (`DendriticLayer` in `src/neuroinspired/models.py`):
 - `linear_branches`: identical, but without the branch ReLU. This control has the same parameters and is still a linear neuron, so any difference from `dendritic` comes from the branch nonlinearity.
 - Simplification: real branches receive inputs from specific, often related sources; here the assignment is random.
 
+Chavlis S, Poirazi P. **Dendrites endow artificial neural networks with accurate, robust and parameter-efficient learning.** *Nat Commun*. 2025. doi:10.1038/s41467-025-56297-9
+
+- Multilayer perceptrons on raw pixels in which each dendrite receives only 16 inputs (random, or from a small image region) and connects to a single soma.
+- Compared with fully connected networks with the same number of nodes, these dendritic networks reached similar or higher accuracy with far fewer parameters and overfitted less.
+- The authors attribute the gains to restricted input sampling and structured connectivity; a version with linear dendrites was not part of the comparisons we found.
+- Part 2 of this project (`*_sparse` and `mlp_*` models) replicates their random-sampling network and adds the linear-dendrite control.
+
 ## Neuron-level change 2: Dale's law
 
 Eccles JC, Fatt P, Koketsu K. **Cholinergic and inhibitory synapses in a pathway from motor-axon collaterals to motoneurones.** *J Physiol*. 1954;126(3):524–562.

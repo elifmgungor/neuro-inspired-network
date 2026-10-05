@@ -18,11 +18,14 @@ import torch
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root/'src'))
 from neuroinspired.data import load_cifar10
-from neuroinspired.models import CNN
+from neuroinspired.models import MLP_MODELS, build_model
 from neuroinspired.training import train_one_epoch, evaluate
 from neuroinspired.results import get_run_name, save_run_results
 
-N_EPOCHS = 15  # epochs on the full training set
+# Epochs on the full training set: 15 for the CNN models,
+# 50 for the MLP models (as used for CIFAR-10 by Chavlis & Poirazi, 2025)
+N_EPOCHS_CNN = 15
+N_EPOCHS_MLP = 50
 LEARNING_RATE = 1e-3
 
 def main():
@@ -32,7 +35,8 @@ def main():
     run_name = get_run_name(model_name, train_percent, seed)
 
     # With less data, train for more epochs so every run makes the same number of weight updates
-    n_epochs = N_EPOCHS * 100 // train_percent
+    n_epochs_full = N_EPOCHS_MLP if model_name in MLP_MODELS else N_EPOCHS_CNN
+    n_epochs = n_epochs_full * 100 // train_percent
 
     torch.manual_seed(seed)
     device = 'mps' if torch.backends.mps.is_available() else 'cpu'
@@ -41,7 +45,7 @@ def main():
     train_loader, validation_loader, test_loader = load_cifar10(project_root/'data', train_percent, random_state=seed)
 
     # 2. Model and optimizer
-    model = CNN(model_name).to(device)
+    model = build_model(model_name).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     n_parameters = sum(p.numel() for p in model.parameters())
     print(f'Run: {run_name}, device: {device}, parameters: {n_parameters:,}, training images: {len(train_loader.dataset):,}')

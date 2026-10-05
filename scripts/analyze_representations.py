@@ -22,7 +22,7 @@ import torch
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root/'src'))
 from neuroinspired.data import CLASSES, load_cifar10
-from neuroinspired.models import CNN
+from neuroinspired.models import MLP_MODELS, build_model
 from neuroinspired.training import get_hidden_activations
 from neuroinspired.results import get_run_name, update_table
 
@@ -64,7 +64,7 @@ def main():
     rows = []
     for _, run in runs.iterrows():
         run_name = get_run_name(run['model'], 100, run['seed'])
-        model = CNN(run['model']).to(device)
+        model = build_model(run['model']).to(device)
         model.load_state_dict(torch.load(project_root/f'results/models/{run_name}.pt', map_location=device))
         activations, labels = get_hidden_activations(model, test_loader, device)
 
@@ -78,8 +78,10 @@ def main():
                      'class_selectivity': round(float(class_selectivity(means)), 4)})
 
     # 2. Compare the representational geometry of every model with the baseline of the same seed
+    #    (CNN models with 'baseline', MLP models with 'mlp_vanilla')
     for row in rows:
-        baseline = class_means.get(('baseline', row['seed']))
+        reference = 'mlp_vanilla' if row['model'] in MLP_MODELS else 'baseline'
+        baseline = class_means.get((reference, row['seed']))
         if baseline is None:
             row['rdm_similarity_to_baseline'] = np.nan
         else:

@@ -14,7 +14,7 @@ import torch
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root/'src'))
 from neuroinspired.data import load_cifar10
-from neuroinspired.models import CNN
+from neuroinspired.models import build_model
 from neuroinspired.training import evaluate
 from neuroinspired.results import get_run_name, update_table
 
@@ -33,7 +33,7 @@ def main():
     rows = []
     for _, run in runs.iterrows():
         run_name = get_run_name(run['model'], 100, run['seed'])
-        model = CNN(run['model']).to(device)
+        model = build_model(run['model']).to(device)
         model.load_state_dict(torch.load(project_root/f'results/models/{run_name}.pt', map_location=device))
 
         for noise_std in NOISE_LEVELS:
