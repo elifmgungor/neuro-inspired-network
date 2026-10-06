@@ -33,8 +33,12 @@ def main():
     rows = []
     for _, run in runs.iterrows():
         run_name = get_run_name(run['model'], 100, run['seed'])
+        model_file = project_root/f'results/models/{run_name}.pt'
+        if not model_file.exists():
+            print(f'Skipping {run_name}: no trained model in results/models')
+            continue
         model = build_model(run['model']).to(device)
-        model.load_state_dict(torch.load(project_root/f'results/models/{run_name}.pt', map_location=device))
+        model.load_state_dict(torch.load(model_file, map_location=device))
 
         for noise_std in NOISE_LEVELS:
             torch.manual_seed(0)  # the same noise for every model
