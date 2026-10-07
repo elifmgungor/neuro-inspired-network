@@ -76,7 +76,7 @@ All CNN models share the same convolution layers (two convolution blocks → hid
 
 ### MLP models (replication of Chavlis & Poirazi, 2025)
 
-Networks on raw pixels with 4,096 first-layer units (dendrites) and 256 second-layer units (somata); LeakyReLU (0.1) everywhere, 50 epochs, as in the paper.
+Networks on raw pixels with 4,096 first-layer units (dendrites) and 256 second-layer units (somata); LeakyReLU (0.1) everywhere, as in the paper. The paper trains for a fixed 50 epochs; we use the same early stopping as for the CNN models, because the fully connected network was still improving at epoch 50.
 
 | Model | Description | In the paper |
 |---|---|---|
@@ -116,8 +116,9 @@ Any other comparison is exploratory.
 ### Methods shared by all experiments
 
 - **Model selection:** in every run, the weights of the epoch with the highest validation accuracy are evaluated on the test set (`best_epoch` in `summary.csv`). The test set is never used for this choice.
-- **Training length:** the first CNN runs used at most 15 epochs on the full training set. Some runs (all `*_sparse` models and a few runs with 50% of the images) reached their best validation accuracy in the last epochs, so the maximum was raised to 30. Because the best-validation epoch is used and training is deterministic, a longer maximum only changes runs that still improve after the old maximum.
-- **Fewer labels:** with fewer images the number of epochs is increased (30 × 100 / percent, e.g. 300 epochs for 10%), so every run makes the same number of weight updates. The validation and test sets never change.
+- **Early stopping:** every model is trained until the validation accuracy has not improved for 10 epochs, with at most 100 epochs (on the full training set). The actual number of epochs is `n_epochs` in `summary.csv`.
+- **Fewer labels:** an epoch on fewer images has fewer weight updates, so the maximum and the patience are scaled up (e.g. 10% of the images: at most 1,000 epochs, stop after 100 epochs without improvement). The validation and test sets never change.
+- **How the training length was chosen:** the first runs used a fixed 15 epochs (CNN), then 30. In both cases some runs, especially the `*_sparse` models, reached their best validation accuracy in the last epochs, so we switched to early stopping. The earlier results are kept in the git history. Because training is deterministic, a run gives exactly the same result under the old and new rules unless its validation accuracy improved again more than 10 epochs after an earlier best.
 - **Paired comparisons:** models trained with the same seed share the data split, data order and (for CNNs) initial convolution weights, so they are compared seed by seed.
 - **Noise robustness:** Gaussian noise of 0, 0.25, 0.5, 1.0 and 1.5 × the pixel standard deviation added to the test images; the same noise for every model.
 - **Representations:** fraction of active units, fraction of units never active, class selectivity (Morcos et al., 2018), and similarity of the class-by-class representational geometry to the reference model with the same seed (representational similarity analysis, Kriegeskorte, Mur & Bandettini, 2008).
@@ -126,7 +127,7 @@ Any other comparison is exploratory.
 
 | Parameter | Value |
 |---|---:|
-| Maximum epochs, full training set | 30 (CNN), 50 (MLP) |
+| Early stopping, full training set | patience 10 epochs, at most 100 epochs |
 | Optimizer | Adam |
 | Learning rate | 0.001 |
 | Batch size | 128 |
