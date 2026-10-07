@@ -1,6 +1,6 @@
 model,reference,meaning,train_percent,seed,difference
 dendritic,baseline,dendritic branches vs standard neuron,100,1,-0.0091
-dendritic,baseline,dendritic branches vs standard neuron,50,1,-0.0046
+dendritic,baseline,dendritic branches vs standard neuron,50,1,-0.0016
 dendritic,baseline,dendritic branches vs standard neuron,25,1,-0.0138
 dendritic,baseline,dendritic branches vs standard neuron,10,1,-0.0196
 dendritic,baseline,dendritic branches vs standard neuron,100,2,-0.008
@@ -20,11 +20,11 @@ linear_branches,baseline,splitting inputs into linear branches,50,2,-0.0043
 linear_branches,baseline,splitting inputs into linear branches,25,2,-0.0095
 linear_branches,baseline,splitting inputs into linear branches,10,2,-0.0069
 linear_branches,baseline,splitting inputs into linear branches,100,3,0.004
-linear_branches,baseline,splitting inputs into linear branches,50,3,-0.0098
-linear_branches,baseline,splitting inputs into linear branches,25,3,-0.0018
+linear_branches,baseline,splitting inputs into linear branches,50,3,-0.0047
+linear_branches,baseline,splitting inputs into linear branches,25,3,-0.004
 linear_branches,baseline,splitting inputs into linear branches,10,3,0.0037
 dale,baseline,Dale's law,100,1,0.0088
-dale,baseline,Dale's law,50,1,0.007
+dale,baseline,Dale's law,50,1,0.0084
 dale,baseline,Dale's law,25,1,0.0102
 dale,baseline,Dale's law,10,1,0.0027
 dale,baseline,Dale's law,100,2,-0.0015
@@ -48,7 +48,7 @@ divisive_norm,baseline,divisive normalization,50,3,-0.0022
 divisive_norm,baseline,divisive normalization,25,3,0.0008
 divisive_norm,baseline,divisive normalization,10,3,0.0002
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),100,1,-0.0108
-dendritic,linear_branches,branch nonlinearity (branches see all inputs),50,1,-0.0136
+dendritic,linear_branches,branch nonlinearity (branches see all inputs),50,1,-0.0106
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),25,1,-0.0088
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),10,1,-0.0128
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),100,2,-0.0002
@@ -56,33 +56,33 @@ dendritic,linear_branches,branch nonlinearity (branches see all inputs),50,2,-0.
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),25,2,-0.0045
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),10,2,-0.0147
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),100,3,-0.0059
-dendritic,linear_branches,branch nonlinearity (branches see all inputs),50,3,0.0033
-dendritic,linear_branches,branch nonlinearity (branches see all inputs),25,3,-0.0135
+dendritic,linear_branches,branch nonlinearity (branches see all inputs),50,3,-0.0018
+dendritic,linear_branches,branch nonlinearity (branches see all inputs),25,3,-0.0113
 dendritic,linear_branches,branch nonlinearity (branches see all inputs),10,3,-0.0365
-dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),100,1,-0.0191
-dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),10,1,-0.034
-dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),100,2,-0.0166
-dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),10,2,-0.0098
-dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),100,3,-0.0203
-dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),10,3,-0.029
-dendritic_sparse,dendritic,restricted sampling (nonlinear branches),10,1,-0.0623
-dendritic_sparse,dendritic,restricted sampling (nonlinear branches),10,2,-0.0579
-dendritic_sparse,dendritic,restricted sampling (nonlinear branches),10,3,-0.0448
-dendritic_sparse,dendritic,restricted sampling (nonlinear branches),100,1,-0.0546
-dendritic_sparse,dendritic,restricted sampling (nonlinear branches),100,2,-0.0547
-dendritic_sparse,dendritic,restricted sampling (nonlinear branches),100,3,-0.0527
-linear_branches_sparse,linear_branches,restricted sampling (linear branches),10,1,-0.0411
-linear_branches_sparse,linear_branches,restricted sampling (linear branches),10,2,-0.0628
-linear_branches_sparse,linear_branches,restricted sampling (linear branches),10,3,-0.0523
-linear_branches_sparse,linear_branches,restricted sampling (linear branches),100,1,-0.0463
-linear_branches_sparse,linear_branches,restricted sampling (linear branches),100,2,-0.0383
-linear_branches_sparse,linear_branches,restricted sampling (linear branches),100,3,-0.0383
-dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,10,1,-0.0819
-dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,10,2,-0.0795
-dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,10,3,-0.0776
-dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,100,1,-0.0637
-dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,100,2,-0.0627
-dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,100,3,-0.0546
+dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),100,1,-0.0199
+dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),10,1,-0.0182
+dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),100,2,-0.0085
+dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),10,2,-0.0159
+dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),100,3,-0.0148
+dendritic_sparse,linear_branches_sparse,branch nonlinearity (16 inputs per branch),10,3,-0.025
+dendritic_sparse,dendritic,restricted sampling (nonlinear branches),10,1,-0.0511
+dendritic_sparse,dendritic,restricted sampling (nonlinear branches),10,2,-0.0641
+dendritic_sparse,dendritic,restricted sampling (nonlinear branches),10,3,-0.0401
+dendritic_sparse,dendritic,restricted sampling (nonlinear branches),100,1,-0.0365
+dendritic_sparse,dendritic,restricted sampling (nonlinear branches),100,2,-0.0377
+dendritic_sparse,dendritic,restricted sampling (nonlinear branches),100,3,-0.0355
+linear_branches_sparse,linear_branches,restricted sampling (linear branches),10,1,-0.0457
+linear_branches_sparse,linear_branches,restricted sampling (linear branches),10,2,-0.0629
+linear_branches_sparse,linear_branches,restricted sampling (linear branches),10,3,-0.0516
+linear_branches_sparse,linear_branches,restricted sampling (linear branches),100,1,-0.0274
+linear_branches_sparse,linear_branches,restricted sampling (linear branches),100,2,-0.0294
+linear_branches_sparse,linear_branches,restricted sampling (linear branches),100,3,-0.0266
+dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,10,1,-0.0707
+dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,10,2,-0.0857
+dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,10,3,-0.0729
+dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,100,1,-0.0456
+dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,100,2,-0.0457
+dendritic_sparse,baseline,sparse dendritic neuron vs standard neuron,100,3,-0.0374
 mlp_dendritic_sparse,mlp_vanilla,"MLP: dendritic vs vanilla (Chavlis & Poirazi, 2025)",100,1,0.0017
 mlp_dendritic_sparse,mlp_vanilla,"MLP: dendritic vs vanilla (Chavlis & Poirazi, 2025)",100,2,-0.0132
 mlp_dendritic_sparse,mlp_vanilla,"MLP: dendritic vs vanilla (Chavlis & Poirazi, 2025)",100,3,-0.0041
