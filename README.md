@@ -38,6 +38,8 @@ We do not claim to model real neurons faithfully. More background on each mechan
 
 5. **The focused question.** Separating restricted sampling from the branch nonlinearity, in a CNN and in the original MLP setting, and with fewer training labels, is the part we did not find in the literature. Our literature search was limited, so this needs to be checked further before any claim of novelty.
 
+6. **The answer.** The effect of the branch nonlinearity depends on where the dendritic neurons sit: it helps in the MLP on raw pixels and hurts in the hidden layer of the CNN (see [Results](#results)).
+
 ## Dataset
 
 **CIFAR-10** (Krizhevsky, 2009): 60,000 colour images (32×32) in 10 classes.
@@ -76,7 +78,7 @@ All CNN models share the same convolution layers (two convolution blocks → hid
 
 ### MLP models (replication of Chavlis & Poirazi, 2025)
 
-Networks on raw pixels with 4,096 first-layer units (dendrites) and 256 second-layer units (somata); LeakyReLU (0.1) everywhere, as in the paper. The paper trains for a fixed 50 epochs; we use the same early stopping as for the CNN models, because the fully connected network was still improving at epoch 50.
+Networks on raw pixels with 4,096 first-layer units (dendrites) and 256 second-layer units (somata); LeakyReLU (0.1) everywhere, as in the paper. The paper trains for a fixed 50 epochs; we use the same early stopping as for the CNN models, because in a first run with 50 epochs one fully connected network reached its best validation accuracy at epoch 49.
 
 | Model | Description | In the paper |
 |---|---|---|
@@ -92,7 +94,7 @@ Parameter counts of every model are saved in `results/tables/summary.csv`.
 
 `baseline`, `linear_branches`, `dendritic`, `dale`, `divisive_norm` × seeds 1–3 × 10%, 25%, 50%, 100% of the training images (`bash scripts/run_all.sh`).
 
-### Part 2: where does the dendritic effect come from? (in progress)
+### Part 2: where does the dendritic effect come from? (completed)
 
 A 2 × 2 design, in the CNN and in the MLP:
 
@@ -138,7 +140,40 @@ Any other comparison is exploratory.
 
 ## Results
 
-All numbers and figures are produced by the scripts and are never copied by hand. See `results/tables/` and `results/figures/`.
+All numbers and figures are produced by the scripts and are never copied by hand; this section only describes them. Exact values (mean, standard deviation, number of seeds and number of seeds with a positive difference) are in [`results/tables/paired_comparison.csv`](results/tables/paired_comparison.csv) and [`results/tables/model_comparison.csv`](results/tables/model_comparison.csv).
+
+![Where does the dendritic effect come from?](results/figures/dendrite_study.png)
+
+### Part 2: the four comparisons decided before running
+
+1. **Branch nonlinearity with restricted sampling (CNN): negative.** `dendritic_sparse` was below `linear_branches_sparse` for every seed, with the full training set and with 10% of it. The same was true for branches that see all inputs (`dendritic` vs `linear_branches`) at every training-set size, and the gap grew as the number of training images decreased.
+2. **Restricted sampling (CNN): negative.** `dendritic_sparse` was below `dendritic` for every seed. These models have far fewer parameters, so this difference cannot be attributed to restricted sampling alone.
+3. **Replication of Chavlis & Poirazi (2025): partly replicated.** The dendritic MLP reached about the same test accuracy as the fully connected MLP with roughly two orders of magnitude fewer parameters (parameter counts in `summary.csv`), but it was not more accurate.
+4. **Branch nonlinearity in the MLP: positive.** `mlp_dendritic_sparse` was above `mlp_linear_branches_sparse` for every seed.
+
+### Representations
+
+In both settings the models with dendritic branches had more active units and lower class selectivity than their standard counterparts, i.e. more mixed-selective units, as reported by Chavlis & Poirazi (2025) ([`results/tables/representation_comparison.csv`](results/tables/representation_comparison.csv), [`results/figures/class_rdms.png`](results/figures/class_rdms.png)).
+
+### Part 1: Dale's law and divisive normalization
+
+- Dale's law did not reduce accuracy, although it constrains the network: the average difference to `baseline` was small but positive at every training-set size, and positive for every seed only with 10% of the images. With three seeds this is a trend, not a finding ([`results/figures/low_data.png`](results/figures/low_data.png), [`results/figures/test_accuracy.png`](results/figures/test_accuracy.png)).
+- Divisive normalization did not clearly change accuracy, but made the hidden layer sparser and more class-selective.
+- Robustness to input noise varied strongly between seeds and did not separate the models ([`results/figures/noise_robustness.png`](results/figures/noise_robustness.png)).
+
+## Conclusion
+
+The effect of a dendritic nonlinearity in artificial neurons depends on the network it is placed in. On raw pixels, nonlinear dendrites gave a small but consistent improvement over linear dendrites; in the hidden layer of a CNN, the same nonlinearity consistently reduced accuracy, most strongly with few training images. The linear-branch control, which we did not find in the work we reproduced, is what made it possible to attribute these effects to the nonlinearity itself rather than to splitting the inputs into branches. The parameter efficiency and the mixed selectivity of dendritic networks reported by Chavlis & Poirazi (2025) were replicated; their accuracy advantage was not, when the fully connected network was trained with early stopping.
+
+**Limitations**
+- Three seeds per condition, one dataset (CIFAR-10) and small networks.
+- The learning rate was not tuned separately for each model.
+- The restricted-sampling models have far fewer parameters than the models they are compared with.
+- The literature search was limited; claims of novelty need further checking.
+
+**Open questions**
+- *Why* does the effect reverse? One hypothesis: in the MLP, linear dendrites reduce the network to a single hidden layer, so the nonlinearity adds depth, whereas in the CNN the convolution layers already provide nonlinear features. This could be tested by adding a fixed nonlinear layer to the MLP.
+- More seeds, other datasets, and restricted sampling with matched parameter counts.
 
 ## Repository structure
 
