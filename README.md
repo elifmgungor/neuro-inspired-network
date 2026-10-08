@@ -1,215 +1,111 @@
-# From artificial units to biologically informed networks
+# Neuro-inspired networks
 
-An exploratory NeuroAI project: does changing *how a single artificial neuron computes*, inspired by real neurons, change what a network learns?
+This project compares a small CNN on CIFAR-10 with versions that change how its hidden neurons work: dendritic branches, Dale's law and divisive normalization. The convolution layers stay the same, so the comparison focuses on the hidden layer.
 
-## Research question
+The main question is whether dendritic branches help because they receive fewer inputs, because they apply their own nonlinearity, or both. A second experiment tests this in an MLP on raw pixels, following the random-sampling model of Chavlis & Poirazi (2025).
 
-**Where does the benefit of dendrites in artificial networks come from — from restricted input sampling or from the nonlinearity inside each branch — and does it hold inside a CNN and with few training labels?**
-
-The project started with a broader question: we compared a standard CNN against copies in which only the hidden-layer neurons were changed according to one biological idea at a time, and asked whether each idea changes
-1. **performance** on the task
-2. **learning with fewer labels**
-3. **robustness** to noisy inputs
-4. the **internal representations** the network learns
-
-The results of that first experiment, together with the literature, led to the focused question above (see [How the question developed](#how-the-question-developed)).
-
-We do not claim to model real neurons faithfully. More background on each mechanism is in [`docs/background.md`](docs/background.md).
-
-## How the question developed
-
-1. **Three biological ideas from the literature.** A standard artificial neuron computes a weighted sum of all its inputs and applies one nonlinearity. Real neurons differ, and we implemented three well-known differences as changes to the hidden layer of a small CNN:
-   - **Dendritic branches:** Poirazi, Brannon & Mel (2003) showed that a pyramidal neuron behaves like a small two-layer network, because each dendritic branch processes its own inputs nonlinearly before the soma combines them.
-   - **Dale's law:** a neuron is either excitatory or inhibitory (Eccles, Fatt & Koketsu, 1954); Cornford et al. (2021) showed how artificial networks can follow this rule.
-   - **Divisive normalization:** in visual cortex a neuron's response is divided by the pooled activity of its neighbours (Carandini & Heeger, 2012).
-
-   To isolate the dendritic nonlinearity we added a control, `linear_branches`, with exactly the same branches but without the nonlinearity.
-
-2. **A first, unexpected result.** On CIFAR-10 (Krizhevsky, 2009) the dendritic neuron performed *worse* than the standard neuron for every seed and every training-set size, and the gap grew as the number of training images decreased. The linear-branch control did not show this drop, so it came from the branch nonlinearity (`results/tables/paired_comparison.csv`). Dale's law and divisive normalization did not clearly change accuracy; divisive normalization did make the hidden layer sparser and more class-selective (`results/tables/representation_comparison.csv`).
-
-3. **Reading the literature.** This looked like the opposite of Chavlis & Poirazi (2025), who found that dendritic artificial networks learn more accurately, overfit less and need far fewer parameters. Reading their paper closely, we noticed three differences from our setup:
-   - their networks are multilayer perceptrons on raw pixels, not CNNs;
-   - each of their dendrites receives only **16 inputs** (restricted sampling), and they attribute the gains to this restricted sampling and the structured connectivity;
-   - we did not find a control with **linear dendrites**, nor experiments that vary the **number of training images**.
-
-   They also report that dendritic networks use mixed-selective rather than class-specific units, which matches the lower class selectivity we measured for our dendritic model.
-
-4. **Ideas we considered and set aside.** Combining dendrites, excitatory/inhibitory units and divisive (shunting) inhibition has recently been studied by Safaai et al. (2026); deep networks under Dale's constraint by Abel & Ullman (2026); divisive normalization in CNNs on CIFAR-10 by Cekic et al. (2022); and circuits inspired by the fly mushroom body by Dasgupta, Stevens & Navlakha (2017) and Shen, Dasgupta & Navlakha (2023). We therefore did not make these the focus.
-
-5. **The focused question.** Separating restricted sampling from the branch nonlinearity, in a CNN and in the original MLP setting, and with fewer training labels, is the part we did not find in the literature. Our literature search was limited, so this needs to be checked further before any claim of novelty.
-
-6. **The answer.** The effect of the branch nonlinearity depends on where the dendritic neurons sit: it helps in the MLP on raw pixels and hurts in the hidden layer of the CNN (see [Results](#results)).
-
-## Dataset
-
-**CIFAR-10** (Krizhevsky, 2009): 60,000 colour images (32×32) in 10 classes.
-
-| Split | Images | Source |
-|---|---:|---|
-| Train | 45,000 | official training set |
-| Validation | 5,000 | fixed random part of the official training set |
-| Test | 10,000 | official test set, used only for the final evaluation |
-
-- A small CNN does not reach ceiling performance on CIFAR-10, which leaves room to see whether a neuron-level change helps or hurts.
-- The large test set makes small differences between models measurable.
-- Link to neuroscience: object recognition is the task solved by the visual cortex (Hubel & Wiesel, 1962), and CNNs were themselves inspired by it (Fukushima, 1980).
-
-The dataset (~170 MB) is downloaded to `data/` the first time and is not included in the repository.
-
-## Models
-
-### CNN models
-
-All CNN models share the same convolution layers (two convolution blocks → hidden layer of 128 neurons → 10 outputs). Only the hidden-layer neurons differ:
-
-| Model | Hidden neuron computation | Inputs per branch |
-|---|---|---|
-| `baseline` | `relu(w · x + c)` — standard artificial neuron | – |
-| `linear_branches` | 8 branches, `relu(Σ_b s_b (w_b · x_b + c_b) + d)` — control | 512 (all inputs split) |
-| `dendritic` | 8 branches with their own ReLU, `relu(Σ_b s_b relu(w_b · x_b + c_b) + d)` | 512 (all inputs split) |
-| `linear_branches_sparse` | like `linear_branches` | 16 random |
-| `dendritic_sparse` | like `dendritic` | 16 random |
-| `dale` | standard neuron; 80% of neurons excitatory (outgoing weights ≥ 0), 20% inhibitory (≤ 0) | – |
-| `divisive_norm` | standard neuron, then `r_i = h_i / (σ + mean_j h_j)` with learned σ | – |
-
-- **All inputs split:** the 4,096 inputs of each neuron are assigned to 8 branches of 512 using a fixed random order, so every neuron still receives all inputs.
-- **16 random:** every branch of every neuron samples its own 16 inputs, as in Chavlis & Poirazi (2025). These models have far fewer parameters.
-- With the same seed, all CNN models start from the same convolution weights and see the training images in the same order.
-
-### MLP models (replication of Chavlis & Poirazi, 2025)
-
-Networks on raw pixels with 4,096 first-layer units (dendrites) and 256 second-layer units (somata); LeakyReLU (0.1) everywhere, as in the paper. The paper trains for a fixed 50 epochs; we use the same early stopping as for the CNN models, because in a first run with 50 epochs one fully connected network reached its best validation accuracy at epoch 49.
-
-| Model | Description | In the paper |
-|---|---|---|
-| `mlp_vanilla` | fully connected 3072 → 4096 → 256 → 10 | vANN |
-| `mlp_dendritic_sparse` | 256 somata × 16 dendrites, each dendrite samples 16 random pixels | dANN-R |
-| `mlp_linear_branches_sparse` | same, but dendrites without nonlinearity | not tested |
-
-Parameter counts of every model are saved in `results/tables/summary.csv`.
-
-## Experiments
-
-### Part 1: three biological ideas (completed)
-
-`baseline`, `linear_branches`, `dendritic`, `dale`, `divisive_norm` × seeds 1–3 × 10%, 25%, 50%, 100% of the training images (`bash scripts/run_all.sh`).
-
-### Part 2: where does the dendritic effect come from? (completed)
-
-A 2 × 2 design, in the CNN and in the MLP:
-
-| | Linear branches | Nonlinear branches |
-|---|---|---|
-| **Branches see all inputs** | `linear_branches` | `dendritic` |
-| **16 inputs per branch** | `linear_branches_sparse` | `dendritic_sparse` |
-
-- CNN: seeds 1–3 × 10% and 100% of the training images.
-- MLP: `mlp_vanilla`, `mlp_dendritic_sparse`, `mlp_linear_branches_sparse` × seeds 1–3 × 100%.
-- Run with `bash scripts/run_dendrite_study.sh`.
-
-Comparisons decided before running (`results/tables/paired_comparison.csv`):
-1. Branch nonlinearity with restricted sampling: `dendritic_sparse` − `linear_branches_sparse`
-2. Restricted sampling with nonlinear branches: `dendritic_sparse` − `dendritic`
-3. Replication: `mlp_dendritic_sparse` − `mlp_vanilla` (Chavlis & Poirazi report a positive difference)
-4. The missing control in the MLP: `mlp_dendritic_sparse` − `mlp_linear_branches_sparse`
-
-Any other comparison is exploratory.
-
-### Methods shared by all experiments
-
-- **Model selection:** in every run, the weights of the epoch with the highest validation accuracy are evaluated on the test set (`best_epoch` in `summary.csv`). The test set is never used for this choice.
-- **Early stopping:** every model is trained until the validation accuracy has not improved for 10 epochs, with at most 100 epochs (on the full training set). The actual number of epochs is `n_epochs` in `summary.csv`.
-- **Fewer labels:** an epoch on fewer images has fewer weight updates, so the maximum and the patience are scaled up (e.g. 10% of the images: at most 1,000 epochs, stop after 100 epochs without improvement). The validation and test sets never change.
-- **How the training length was chosen:** the first runs used a fixed 15 epochs (CNN), then 30. In both cases some runs, especially the `*_sparse` models, reached their best validation accuracy in the last epochs, so we switched to early stopping. The earlier results are kept in the git history. Because training is deterministic, a run gives exactly the same result under the old and new rules unless its validation accuracy improved again more than 10 epochs after an earlier best.
-- **Paired comparisons:** models trained with the same seed share the data split, data order and (for CNNs) initial convolution weights, so they are compared seed by seed.
-- **Noise robustness:** Gaussian noise of 0, 0.25, 0.5, 1.0 and 1.5 × the pixel standard deviation added to the test images; the same noise for every model.
-- **Representations:** fraction of active units, fraction of units never active, class selectivity (Morcos et al., 2018), and similarity of the class-by-class representational geometry to the reference model with the same seed (representational similarity analysis, Kriegeskorte, Mur & Bandettini, 2008).
-
-## Main parameters
-
-| Parameter | Value |
-|---|---:|
-| Early stopping, full training set | patience 10 epochs, at most 100 epochs |
-| Optimizer | Adam |
-| Learning rate | 0.001 |
-| Batch size | 128 |
-| CNN hidden neurons / branches per neuron | 128 / 8 |
-| MLP somata / dendrites per soma / inputs per dendrite | 256 / 16 / 16 |
-| Excitatory fraction (`dale`) | 0.8 |
-| Seeds | 1, 2, 3 |
+In these runs, branch nonlinearities helped the MLP but reduced accuracy in the CNN. The repository includes the training scripts, results tables and figures.
 
 ## Results
 
-All numbers and figures are produced by the scripts and are never copied by hand; this section only describes them. Exact values (mean, standard deviation, number of seeds and number of seeds with a positive difference) are in [`results/tables/paired_comparison.csv`](results/tables/paired_comparison.csv) and [`results/tables/model_comparison.csv`](results/tables/model_comparison.csv).
+![Dendritic branches in CNNs and MLPs](results/figures/dendrite_study.png)
 
-![Where does the dendritic effect come from?](results/figures/dendrite_study.png)
+The clearest result was the difference between the two settings. With 16 inputs per branch, nonlinear branches reduced CNN test accuracy by an average of 1.47 percentage points compared with linear branches on the full training set. In the MLP, nonlinear branches improved accuracy by 1.04 points. Both directions held across all three seeds.
 
-### Part 2: the four comparisons decided before running
+The dendritic MLP also reached close to the accuracy of the fully connected MLP with roughly two orders of magnitude fewer parameters. It did not reproduce the accuracy advantage reported by Chavlis & Poirazi, with early stopping used here for both models.
 
-1. **Branch nonlinearity with restricted sampling (CNN): negative.** `dendritic_sparse` was below `linear_branches_sparse` for every seed, with the full training set and with 10% of it. The same was true for branches that see all inputs (`dendritic` vs `linear_branches`) at every training-set size, and the gap grew as the number of training images decreased.
-2. **Restricted sampling (CNN): negative.** `dendritic_sparse` was below `dendritic` for every seed. These models have far fewer parameters, so this difference cannot be attributed to restricted sampling alone.
-3. **Replication of Chavlis & Poirazi (2025): partly replicated.** The dendritic MLP reached about the same test accuracy as the fully connected MLP with roughly two orders of magnitude fewer parameters (parameter counts in `summary.csv`), but it was not more accurate.
-4. **Branch nonlinearity in the MLP: positive.** `mlp_dendritic_sparse` was above `mlp_linear_branches_sparse` for every seed.
+| Model | Test accuracy, full training set |
+|---|---:|
+| CNN baseline | 71.89 ± 0.65% |
+| CNN, linear branches | 71.82 ± 0.04% |
+| CNN, nonlinear branches | 71.26 ± 0.54% |
+| CNN, sparse linear branches | 69.12 ± 0.24% |
+| CNN, sparse nonlinear branches | 67.65 ± 0.45% |
+| CNN, Dale's law | 72.37 ± 0.25% |
+| CNN, divisive normalization | 71.45 ± 1.11% |
+| Fully connected MLP | 52.89 ± 0.35% |
+| MLP, sparse linear branches | 51.63 ± 0.33% |
+| MLP, sparse nonlinear branches | 52.67 ± 0.69% |
 
-### Representations
+Values are mean ± standard deviation over seeds 1, 2 and 3, from [model_comparison.csv](results/tables/model_comparison.csv). CNNs and MLPs have different architectures; the branch controls should be compared within each setting. Seed-by-seed differences are summarized in [paired_comparison.csv](results/tables/paired_comparison.csv).
 
-In both settings the models with dendritic branches had more active units and lower class selectivity than their standard counterparts, i.e. more mixed-selective units, as reported by Chavlis & Poirazi (2025) ([`results/tables/representation_comparison.csv`](results/tables/representation_comparison.csv), [`results/figures/class_rdms.png`](results/figures/class_rdms.png)).
+A few other observations:
 
-### Part 1: Dale's law and divisive normalization
+- Nonlinear branches also reduced CNN accuracy when branches received all inputs. The gap grew with fewer training images.
+- Restricting CNN branches to 16 inputs reduced accuracy for both linear and nonlinear branches. It also reduced parameter counts, so this comparison does not isolate connectivity alone.
+- Dale's law gave a small average improvement over the baseline, but three seeds are too few to draw a firm conclusion. Divisive normalization showed no clear accuracy benefit.
+- Divisive normalization made hidden activity sparser and more class-selective. Dendritic models had more active units and lower class selectivity than their standard counterparts.
+- Noise robustness varied between seeds without a clear separation between models.
 
-- Dale's law did not reduce accuracy, although it constrains the network: the average difference to `baseline` was small but positive at every training-set size, and positive for every seed only with 10% of the images. With three seeds this is a trend, not a finding ([`results/figures/low_data.png`](results/figures/low_data.png), [`results/figures/test_accuracy.png`](results/figures/test_accuracy.png)).
-- Divisive normalization did not clearly change accuracy, but made the hidden layer sparser and more class-selective.
-- Robustness to input noise varied strongly between seeds and did not separate the models ([`results/figures/noise_robustness.png`](results/figures/noise_robustness.png)).
+See the figures for [learning with fewer labels](results/figures/low_data.png), [noise robustness](results/figures/noise_robustness.png) and [class representations](results/figures/class_rdms.png).
 
-## Conclusion
+## Why these comparisons?
 
-The effect of a dendritic nonlinearity in artificial neurons depends on the network it is placed in. On raw pixels, nonlinear dendrites gave a small but consistent improvement over linear dendrites; in the hidden layer of a CNN, the same nonlinearity consistently reduced accuracy, most strongly with few training images. The linear-branch control, which we did not find in the work we reproduced, is what made it possible to attribute these effects to the nonlinearity itself rather than to splitting the inputs into branches. The parameter efficiency and the mixed selectivity of dendritic networks reported by Chavlis & Poirazi (2025) were replicated; their accuracy advantage was not, when the fully connected network was trained with early stopping.
+The first experiment tested three biological ideas in the same CNN. Dendritic branches performed worse than expected, which led to a closer look at the setup in Chavlis & Poirazi (2025): their networks use raw pixels and each dendrite receives only 16 inputs. The original CNN branches received all 4,096 hidden-layer inputs, split across eight branches.
 
-**Limitations**
-- Three seeds per condition, one dataset (CIFAR-10) and small networks.
-- The learning rate was not tuned separately for each model.
-- The restricted-sampling models have far fewer parameters than the models they are compared with.
-- The literature search was limited; claims of novelty need further checking.
+The follow-up separates input sampling from branch nonlinearity. Each nonlinear model has a control with the same connections and parameters but no activation inside the branches. This makes it possible to test what the branch activation contributes. The MLP experiment follows the paper's random-sampling architecture and adds the same linear-branch control.
 
-**Open questions**
-- *Why* does the effect reverse? One hypothesis: in the MLP, linear dendrites reduce the network to a single hidden layer, so the nonlinearity adds depth, whereas in the CNN the convolution layers already provide nonlinear features. This could be tested by adding a fixed nonlinear layer to the MLP.
-- More seeds, other datasets, and restricted sampling with matched parameter counts.
+These are simplified neuron models. The biological motivation and implementation details are in [docs/background.md](docs/background.md).
 
-## Repository structure
+## Models
 
-```text
-neuro-inspired-network/
-├── LICENSE
-├── README.md
-├── data/                          # CIFAR-10, downloaded automatically (not in the repository)
-├── docs/
-│   ├── background.md              # the biological mechanisms in more detail
-│   └── references.bib             # all references (BibTeX)
-├── requirements.txt
-├── results/
-│   ├── figures/
-│   ├── models/                    # trained weights (not in the repository)
-│   └── tables/
-├── scripts/
-│   ├── analyze_representations.py
-│   ├── compare_models.py
-│   ├── evaluate_noise.py
-│   ├── make_figures.py
-│   ├── run_all.sh                 # Part 1
-│   ├── run_dendrite_study.sh      # Part 2
-│   └── train.py
-└── src/
-    └── neuroinspired/
-        ├── __init__.py
-        ├── data.py
-        ├── models.py
-        ├── results.py
-        └── training.py
-```
+### CNN
 
-## Running the analysis
+All CNNs use two convolution blocks, a hidden layer of 128 neurons and 10 outputs. Only the hidden-layer computation changes.
 
-Install dependencies:
+| Model | Hidden layer |
+|---|---|
+| `baseline` | Weighted sum followed by ReLU |
+| `linear_branches` | Eight linear branches, followed by a weighted sum and ReLU at the soma |
+| `dendritic` | Same branches, with ReLU inside each branch as well |
+| `linear_branches_sparse` | Linear branches with 16 randomly sampled inputs each |
+| `dendritic_sparse` | Nonlinear branches with 16 randomly sampled inputs each |
+| `dale` | 80% excitatory and 20% inhibitory units, with fixed signs on outgoing weights |
+| `divisive_norm` | ReLU activity divided by a learned positive offset plus mean hidden-layer activity |
+
+In the dense branch models, each neuron receives all 4,096 inputs, randomly assigned to eight branches of 512. In the sparse models, each branch samples its own 16 inputs. The assignments stay fixed during training.
+
+### MLP
+
+The MLPs take the 3,072 image pixels directly. The dendritic architecture has 256 somata, each with 16 dendrites receiving 16 randomly sampled pixels. Activations use LeakyReLU with slope 0.1.
+
+| Model | Architecture |
+|---|---|
+| `mlp_vanilla` | Fully connected 3072 → 4096 → 256 → 10 |
+| `mlp_dendritic_sparse` | Sparse dendrites with a branch nonlinearity (dANN-R in Chavlis & Poirazi) |
+| `mlp_linear_branches_sparse` | Same sparse connections, without the branch nonlinearity |
+
+Parameter counts are recorded in [summary.csv](results/tables/summary.csv).
+
+## Experiments and training
+
+CIFAR-10 contains 60,000 colour images of size 32 × 32 in 10 classes. For each seed, the official training set is split into 45,000 training images and 5,000 validation images. The official 10,000-image test set is used for final evaluation. Models with the same seed share the split; reducing the training set leaves validation and test data unchanged.
+
+The experiments use seeds 1, 2 and 3:
+
+- **Part 1:** baseline, dense linear and nonlinear branches, Dale's law and divisive normalization, each with 10%, 25%, 50% and 100% of the training images.
+- **Part 2:** dense and sparse branch models in the CNN with 10% and 100% of the training images, plus the three MLP models with the full training set.
+
+The four planned follow-up comparisons were nonlinear versus linear sparse CNN branches, sparse versus dense nonlinear CNN branches, dendritic versus fully connected MLP, and nonlinear versus linear sparse MLP branches. Other comparisons are exploratory.
+
+| Setting | Value |
+|---|---|
+| Optimizer | Adam |
+| Learning rate | 0.001 |
+| Batch size | 128 |
+| Maximum epochs, full training set | 100 |
+| Early stopping patience, full training set | 10 epochs |
+| Model selection | Highest validation accuracy |
+
+With fewer training images, the epoch limit and patience scale inversely with the training fraction: at 10%, they become 1,000 and 100 epochs. The checkpoint with the highest validation accuracy is used for test evaluation. CNN models with the same seed share initial convolution weights and training image order.
+
+Early runs used fixed limits of 15 and then 30 CNN epochs. Some models were still improving near the limit, so the final runs use early stopping. Earlier results remain in the Git history. The MLP training schedule also differs from the paper's fixed 50 epochs.
+
+Noise evaluation adds Gaussian noise at standard deviations of 0, 0.25, 0.5, 1.0 and 1.5 in normalized image space, using the same noise across models. Representation analysis measures active and inactive units, class selectivity and similarity between class representational dissimilarity matrices.
+
+## Running the project
+
+From the repository root:
 
 ```bash
 python3 -m venv .venv
@@ -217,42 +113,62 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the experiments (finished runs are skipped, so the scripts can be stopped and restarted):
+Train one model on the full training set, or on a smaller subset:
 
 ```bash
-caffeinate -i bash scripts/run_all.sh              # Part 1
-caffeinate -i bash scripts/run_dendrite_study.sh   # Part 2
+python3 scripts/train.py baseline 1
+python3 scripts/train.py dendritic 1 10
 ```
 
-Or step by step:
+Run the full experiments and their analyses:
 
 ```bash
-python3 scripts/train.py dendritic 1          # model, seed (full training set)
-python3 scripts/train.py dendritic 1 10       # model, seed, % of training images
+bash scripts/run_all.sh
+bash scripts/run_dendrite_study.sh
+```
+
+Both scripts skip training runs that already have a saved checkpoint. On macOS, prefix a command with `caffeinate -i` to keep the machine awake. Training currently uses Apple MPS when available and CPU otherwise.
+
+CIFAR-10 is downloaded automatically into `data/`. Trained weights are saved in `results/models/`; neither directory is included in Git. Tables and figures from the completed runs are included.
+
+To regenerate tables and figures from the existing results:
+
+```bash
+python3 scripts/compare_models.py
+python3 scripts/make_figures.py
+```
+
+Noise and representation analyses require saved model checkpoints. After training, run:
+
+```bash
 python3 scripts/evaluate_noise.py
 python3 scripts/analyze_representations.py
 python3 scripts/compare_models.py
 python3 scripts/make_figures.py
 ```
 
-## Main outputs
+## Files and outputs
 
-```text
-results/tables/summary.csv                     one row per training run
-results/tables/model_comparison.csv            mean ± std over seeds, per model and training-set size
-results/tables/paired_differences.csv          model − reference, per training-set size and seed
-results/tables/paired_comparison.csv           paired differences summarized over seeds
-results/tables/noise_robustness.csv            one row per run and noise level
-results/tables/noise_comparison.csv            mean ± std over seeds, per model and noise level
-results/tables/representations.csv             hidden-layer measures, one row per run
-results/tables/representation_comparison.csv   mean ± std over seeds, per model
-results/tables/<run>_history.csv               training loss and validation accuracy per epoch
-results/tables/<run>_confusion_matrix.csv      test confusion matrix (rows = true class)
-results/tables/<run>_class_means.csv           mean hidden-layer activity per class
-results/figures/                               figures made from the tables above
-```
+| Path | Contents |
+|---|---|
+| `src/neuroinspired/` | Models, data loading, training and result saving |
+| `scripts/` | Training, comparisons, analyses and plotting |
+| `docs/background.md` | Biological background and model assumptions |
+| `docs/references.bib` | Bibliography |
+| `results/figures/` | Accuracy, learning curves, noise and representation plots |
+| `results/tables/summary.csv` | One row per run, including parameter count and best epoch |
+| `results/tables/model_comparison.csv` | Accuracy means and standard deviations across seeds |
+| `results/tables/paired_comparison.csv` | Paired accuracy differences across seeds |
+| `results/tables/noise_comparison.csv` | Noise robustness across seeds |
+| `results/tables/representation_comparison.csv` | Hidden-layer activity and representation comparisons |
 
-`<run>` is `<model>_train<percent>_seed<seed>`, e.g. `dendritic_train100_seed1`.
+Per-run tables use names such as `dendritic_train10_seed1_history.csv`. Confusion matrices and class mean activations are saved alongside training histories.
+
+## Limits and next steps
+
+The results cover one dataset, small networks and three seeds per condition. The learning rate was shared across models rather than tuned separately, and sparse and dense models have different parameter counts. The literature review was limited, so the added controls should not be taken as a claim of novelty.
+
+One possible explanation for the CNN/MLP difference is that nonlinear branches add useful depth to the MLP, while the CNN already supplies nonlinear features through its convolution layers. That remains a hypothesis. A next experiment could add a fixed nonlinear layer to the linear-branch MLP, then test the comparison with more seeds, other datasets and matched parameter counts.
 
 ## References
 

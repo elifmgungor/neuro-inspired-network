@@ -1,78 +1,68 @@
-# Background and references
+# Biological background
 
-## Dataset
+The models in this project borrow a few ideas from neuroscience and apply them to artificial hidden neurons. Each captures one aspect of neural computation; none is a detailed model of a biological circuit. Implementations are in [models.py](../src/neuroinspired/models.py), with the experiments and results described in the [README](../README.md).
 
-Krizhevsky A. **Learning multiple layers of features from tiny images.** Technical report, University of Toronto, 2009.
-https://www.cs.toronto.edu/~kriz/cifar.html
+## Visual cortex and CNNs
 
-## Why CNNs are linked to the visual cortex
+Neurons in early visual cortex respond to local regions of an image. The hierarchy of simple and complex cells described by Hubel & Wiesel helped motivate architectures that combine local feature detection with pooling, including Fukushima's neocognitron and later CNNs.
 
-Hubel DH, Wiesel TN. **Receptive fields, binocular interaction and functional architecture in the cat's visual cortex.** *J Physiol*. 1962;160(1):106–154.
+Here, a small CNN provides the same feature extractor for each hidden-layer variant. CIFAR-10 provides an object recognition task with enough difficulty to compare the models.
 
-- Neurons in early visual cortex respond to small, local parts of the image (receptive fields).
-- "Simple" and "complex" cells form a hierarchy.
+- Hubel DH, Wiesel TN. *Receptive fields, binocular interaction and functional architecture in the cat's visual cortex.* J Physiol. 1962;160(1):106–154.
+- Fukushima K. *Neocognitron: a self-organizing neural network model for a mechanism of pattern recognition unaffected by shift in position.* Biol Cybern. 1980;36(4):193–202.
+- Krizhevsky A. *Learning multiple layers of features from tiny images.* University of Toronto, 2009. [Dataset and report](https://www.cs.toronto.edu/~kriz/cifar.html).
 
-Fukushima K. **Neocognitron: a self-organizing neural network model for a mechanism of pattern recognition unaffected by shift in position.** *Biol Cybern*. 1980;36(4):193–202.
+## Dendritic branches
 
-- First network built on this hierarchy; convolution + pooling in modern CNNs follow the same idea.
+A standard artificial neuron combines its inputs in one weighted sum before applying an activation. Dendrites can perform local nonlinear computations before their outputs reach the soma. Poirazi, Brannon & Mel showed how this behaviour can be represented as a small two-layer network within a pyramidal neuron.
 
-## Neuron-level change 1: dendritic branches
+The dense CNN branch models assign each hidden neuron's 4,096 inputs to eight branches of 512. In `dendritic`, each branch applies ReLU; the soma then combines branch outputs with learned weights and applies another ReLU. In `linear_branches`, the branch ReLU is removed, while the soma ReLU remains. Both models have the same connections and parameter count, so their comparison tests the contribution of the branch nonlinearity.
 
-Poirazi P, Brannon T, Mel BW. **Pyramidal neuron as two-layer neural network.** *Neuron*. 2003;37(6):989–999.
+The sparse variants give each branch 16 randomly sampled inputs. All input assignments are fixed during training. Random sampling is a simplification: biological branches can receive inputs with spatial or functional structure.
 
-- A standard artificial neuron sums all inputs at once and applies one nonlinearity.
-- In real pyramidal neurons, dendritic branches first apply their own nonlinearity to their inputs; the soma then combines the branch outputs.
-- This can be modelled as a small two-layer network inside a single neuron.
+Chavlis & Poirazi studied dendritic MLPs in which each dendrite receives a small subset of raw pixels and connects to one soma. Their models achieved similar or higher accuracy than fully connected networks with far fewer parameters. They attributed the gains to restricted sampling and structured connectivity.
 
-In this project (`DendriticLayer` in `src/neuroinspired/models.py`):
+The MLP experiment here follows their random-sampling architecture and adds a version with linear dendrites. This comparison keeps connectivity fixed while testing the branch activation. The training schedule uses early stopping, which differs from the paper.
 
-- Each hidden neuron has 8 branches; each branch receives 512 of the 4,096 inputs (fixed random assignment).
-- `dendritic`: each branch applies ReLU, the soma takes a weighted sum of the branches and applies ReLU again.
-- `linear_branches`: identical, but without the branch ReLU. This control has the same parameters and is still a linear neuron, so any difference from `dendritic` comes from the branch nonlinearity.
-- Simplification: real branches receive inputs from specific, often related sources; here the assignment is random.
+- Poirazi P, Brannon T, Mel BW. *Pyramidal neuron as two-layer neural network.* Neuron. 2003;37(6):989–999.
+- Chavlis S, Poirazi P. *Dendrites endow artificial neural networks with accurate, robust and parameter-efficient learning.* Nat Commun. 2025. [doi](https://doi.org/10.1038/s41467-025-56297-9).
 
-Chavlis S, Poirazi P. **Dendrites endow artificial neural networks with accurate, robust and parameter-efficient learning.** *Nat Commun*. 2025. doi:10.1038/s41467-025-56297-9
+## Dale's law
 
-- Multilayer perceptrons on raw pixels in which each dendrite receives only 16 inputs (random, or from a small image region) and connects to a single soma.
-- Compared with fully connected networks with the same number of nodes, these dendritic networks reached similar or higher accuracy with far fewer parameters and overfitted less.
-- The authors attribute the gains to restricted input sampling and structured connectivity; a version with linear dendrites was not part of the comparisons we found.
-- Part 2 of this project (`*_sparse` and `mlp_*` models) replicates their random-sampling network and adds the linear-dendrite control.
+Dale's principle motivates separating excitatory and inhibitory units rather than allowing a single artificial neuron to have both positive and negative outgoing weights. The `dale` model uses 102 excitatory and 26 inhibitory hidden neurons, approximately an 80/20 split.
 
-## Neuron-level change 2: Dale's law
+`DaleLinear` fixes each neuron's outgoing weight signs and learns their magnitudes. Only the hidden-to-output connections are constrained; the model does not include a separate inhibitory circuit.
 
-Eccles JC, Fatt P, Koketsu K. **Cholinergic and inhibitory synapses in a pathway from motor-axon collaterals to motoneurones.** *J Physiol*. 1954;126(3):524–562.
+- Eccles JC, Fatt P, Koketsu K. *Cholinergic and inhibitory synapses in a pathway from motor-axon collaterals to motoneurones.* J Physiol. 1954;126(3):524–562.
+- Cornford J, Kalajdzievski D, Leite M, Lamarquette A, Kullmann DM, Richards B. *Learning to live with Dale's principle: ANNs with separate excitatory and inhibitory units.* ICLR. 2021.
 
-Cornford J, Kalajdzievski D, Leite M, Lamarquette A, Kullmann DM, Richards B. **Learning to live with Dale's principle: ANNs with separate excitatory and inhibitory units.** *ICLR*. 2021.
+## Divisive normalization
 
-- A neuron releases the same neurotransmitter at all its synapses, so it is either excitatory or inhibitory ("Dale's principle", named by Eccles).
-- In standard artificial networks, one neuron can have positive and negative outgoing weights at the same time.
-- In cortex, roughly 80% of neurons are excitatory and 20% inhibitory.
+Divisive normalization scales a neuron's response by pooled activity. In visual cortex, it helps describe how responses depend on the surrounding stimulus and its contrast.
 
-In this project (`DaleLinear` in `src/neuroinspired/models.py`):
+`DivisiveNormalization` uses the following rule after the hidden-layer ReLU:
 
-- 102 of the 128 hidden neurons are excitatory (all outgoing weights ≥ 0), 26 are inhibitory (all ≤ 0).
-- The network learns the size of each weight; the sign is fixed.
-- Simplification: only the outgoing weights of the hidden layer follow the rule; there is no separate inhibitory circuit.
+```text
+r_i = h_i / (σ + mean_j h_j)
+```
 
-## Neuron-level change 3: divisive normalization
+The offset σ is learned and kept positive. The pool is the whole hidden layer with equal weights, rather than a local neighbourhood.
 
-Carandini M, Heeger DJ. **Normalization as a canonical neural computation.** *Nat Rev Neurosci*. 2012;13(1):51–62.
+- Carandini M, Heeger DJ. *Normalization as a canonical neural computation.* Nat Rev Neurosci. 2012;13(1):51–62.
 
-- In visual cortex (and many other areas), a neuron's response is divided by the summed activity of a pool of neighbouring neurons.
-- This makes responses depend on relative rather than absolute input strength (e.g. contrast).
+## Representation analysis
 
-In this project (`DivisiveNormalization` in `src/neuroinspired/models.py`):
+Class selectivity compares a unit's mean activity for its preferred class with its mean activity for the other classes:
 
-- `r_i = h_i / (σ + mean_j h_j)`, where `h` is the ReLU output of the hidden layer and the pool is the whole layer.
-- σ is learned and kept positive.
-- Simplification: the pool is every hidden neuron with equal weight, not a local neighbourhood.
+```text
+selectivity = (preferred_mean − other_mean) / (preferred_mean + other_mean)
+```
 
-## Analysis methods
+The analysis also measures the fraction of active units and units that remain inactive. The MLPs use LeakyReLU; activity and selectivity measures use only the positive part of the outputs. RDMs use the original activations.
 
-Morcos AS, Barrett DGT, Rabinowitz NC, Botvinick M. **On the importance of single directions for generalization.** *ICLR*. 2018.
+A representational dissimilarity matrix (RDM) measures differences between mean activation patterns for pairs of classes. Comparing RDMs tests whether two models organize classes similarly without matching individual neurons.
 
-- Class selectivity index of a neuron: (mean activity for the preferred class − mean for the other classes) / (sum of both).
+- Morcos AS, Barrett DGT, Rabinowitz NC, Botvinick M. *On the importance of single directions for generalization.* ICLR. 2018.
+- Kriegeskorte N, Mur M, Bandettini P. *Representational similarity analysis — connecting the branches of systems neuroscience.* Front Syst Neurosci. 2008;2:4.
 
-Kriegeskorte N, Mur M, Bandettini P. **Representational similarity analysis — connecting the branches of systems neuroscience.** *Front Syst Neurosci*. 2008;2:4.
-
-- Representational dissimilarity matrix (RDM): how different the average activity patterns for every pair of classes are. Comparing RDMs compares the "geometry" of two representations without matching individual neurons.
+The full bibliography is in [references.bib](references.bib).
