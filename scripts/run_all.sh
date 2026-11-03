@@ -8,16 +8,11 @@ MODELS="baseline linear_branches dendritic dale divisive_norm"
 SEEDS="1 2 3"
 TRAIN_PERCENTS="100 50 25 10"
 
-# 1. Training (runs whose trained model already exists are skipped,
-#    so the script can be stopped and started again)
+# 1. Training (skip only checkpoints with matching provenance)
 for seed in $SEEDS; do
     for train_percent in $TRAIN_PERCENTS; do
         for model in $MODELS; do
-            if [ -f "results/models/${model}_train${train_percent}_seed${seed}.pt" ]; then
-                echo "Skipping ${model}_train${train_percent}_seed${seed} (already done)"
-            else
-                python3 scripts/train.py $model $seed $train_percent
-            fi
+            python3 scripts/train.py "$model" "$seed" "$train_percent" --skip-existing
         done
     done
 done

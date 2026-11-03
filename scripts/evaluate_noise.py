@@ -13,6 +13,7 @@ import torch
 
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root/'src'))
+from neuroinspired.checkpoints import load_weights, select_device
 from neuroinspired.data import load_cifar10
 from neuroinspired.models import build_model
 from neuroinspired.training import evaluate
@@ -23,7 +24,7 @@ from neuroinspired.results import get_run_name, update_table
 NOISE_LEVELS = [0, 0.25, 0.5, 1.0, 1.5]
 
 def main():
-    device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    device = select_device()
     tables_directory = project_root/'results/tables'
     _, _, test_loader = load_cifar10(project_root/'data')
 
@@ -38,7 +39,7 @@ def main():
             print(f'Skipping {run_name}: no trained model in results/models')
             continue
         model = build_model(run['model']).to(device)
-        model.load_state_dict(torch.load(model_file, map_location=device))
+        model.load_state_dict(load_weights(model_file, device))
 
         for noise_std in NOISE_LEVELS:
             torch.manual_seed(0)  # the same noise for every model

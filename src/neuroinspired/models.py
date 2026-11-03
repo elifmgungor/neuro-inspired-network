@@ -1,7 +1,7 @@
 '''
 Network architectures.
 
-CNN models share the same convolution layers; only the hidden-layer neurons differ:
+CNN models use the same convolutional architecture and initialization, trained independently; only the hidden-layer neurons differ:
     - baseline:               standard neurons, relu(sum of weighted inputs)
     - linear_branches:        inputs are split into dendritic branches, branches are summed linearly (control)
     - dendritic:              same branches, but each branch applies its own ReLU before the soma sums them

@@ -62,7 +62,7 @@ def main():
     comparison.to_csv(TABLES_DIRECTORY/'model_comparison.csv', index=False)
     print(comparison.to_string(index=False), '\n')
 
-    # 2. Paired differences: the same seed means the same data split, data order and convolution weights
+    # 2. Paired differences: the same seed means the same data split, data order and initial convolution weights
     differences = paired_differences(summary)
     differences.to_csv(TABLES_DIRECTORY/'paired_differences.csv', index=False)
     paired = differences.groupby(['model', 'reference', 'meaning', 'train_percent'])['difference'].agg(

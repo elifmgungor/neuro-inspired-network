@@ -3,17 +3,13 @@
 # Restricted sampling vs branch nonlinearity, in the CNN and in the MLP of Chavlis & Poirazi (2025).
 # Run from the project root:
 #     bash scripts/run_dendrite_study.sh
-# Runs whose trained model already exists are skipped, so the script can be stopped and started again.
+# Only checkpoints with matching provenance are skipped.
 set -e
 
 SEEDS="1 2 3"
 
 train() {
-    if [ -f "results/models/$1_train$3_seed$2.pt" ]; then
-        echo "Skipping $1_train$3_seed$2 (already done)"
-    else
-        python3 scripts/train.py $1 $2 $3
-    fi
+    python3 scripts/train.py "$1" "$2" "$3" --skip-existing
 }
 
 # 1. CNN: 2 x 2 design (linear_branches and dendritic were trained in Part 1)

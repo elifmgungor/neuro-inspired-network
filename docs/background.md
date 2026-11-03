@@ -58,7 +58,7 @@ Class selectivity compares a unit's mean activity for its preferred class with i
 selectivity = (preferred_mean − other_mean) / (preferred_mean + other_mean)
 ```
 
-The analysis also measures the fraction of active units and units that remain inactive. The MLPs use LeakyReLU; activity and selectivity measures use only the positive part of the outputs. RDMs use the original activations.
+The analysis also measures positive activity. `dead_fraction` means “fraction never positive on the evaluation set”, not a fraction of nonfunctional neurons. The MLPs use LeakyReLU, so negative outputs can still carry information; activity and selectivity measures use only the positive part of the outputs. RDMs use the original activations.
 
 A representational dissimilarity matrix (RDM) measures differences between mean activation patterns for pairs of classes. Comparing RDMs tests whether two models organize classes similarly without matching individual neurons.
 

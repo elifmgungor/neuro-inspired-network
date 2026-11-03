@@ -3,10 +3,13 @@ What does the hidden layer learn?
 For every trained model (full training set), the hidden-layer activity on the
 test images is summarized with simple, interpretable measures:
     - active_fraction:     average fraction of hidden neurons active (> 0) per image
-    - dead_fraction:       fraction of hidden neurons never active on the test set
+    - dead_fraction:       fraction never positive on the evaluation set
     - class_selectivity:   how strongly neurons prefer one class (0 = no preference, 1 = only one class)
     - rdm_similarity_to_baseline: how similar the class-by-class representational geometry
                            is to the baseline trained with the same seed (1 = identical)
+
+These positive-activity measures do not imply that LeakyReLU neurons are
+nonfunctional: negative activations can still carry information.
 
 Outputs:
     results/tables/representations.csv
@@ -21,6 +24,7 @@ import torch
 
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root/'src'))
+from neuroinspired.checkpoints import load_weights, select_device
 from neuroinspired.data import CLASSES, load_cifar10
 from neuroinspired.models import MLP_MODELS, build_model
 from neuroinspired.training import get_hidden_activations
@@ -30,7 +34,7 @@ def class_selectivity(class_means):
     '''
     Class selectivity index per neuron (Morcos et al., 2018):
         (mean for the preferred class - mean for the other classes) / (sum of both)
-    Neurons that are never active are ignored.
+    Neurons with no positive class mean are ignored.
     '''
     preferred = class_means.max(axis=0)
     others = (class_means.sum(axis=0) - preferred) / (len(class_means) - 1)
@@ -52,7 +56,7 @@ def rdm_similarity(rdm_a, rdm_b):
     return np.corrcoef(rdm_a[upper], rdm_b[upper])[0, 1]
 
 def main():
-    device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    device = select_device()
     tables_directory = project_root/'results/tables'
     _, _, test_loader = load_cifar10(project_root/'data')
 
@@ -69,7 +73,7 @@ def main():
             print(f'Skipping {run_name}: no trained model in results/models')
             continue
         model = build_model(run['model']).to(device)
-        model.load_state_dict(torch.load(model_file, map_location=device))
+        model.load_state_dict(load_weights(model_file, device))
         activations, labels = get_hidden_activations(model, test_loader, device)
 
         means = np.array([activations[labels == c].mean(axis=0) for c in range(len(CLASSES))])

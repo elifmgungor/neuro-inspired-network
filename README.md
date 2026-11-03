@@ -1,6 +1,6 @@
 # Neuro-inspired networks
 
-This project compares a small CNN on CIFAR-10 with versions that change how its hidden neurons work: dendritic branches, Dale's law and divisive normalization. The convolution layers stay the same, so the comparison focuses on the hidden layer.
+This project compares a small CNN on CIFAR-10 with versions that change how its hidden neurons work: dendritic branches, Dale's law and divisive normalization. The CNNs use the same convolutional architecture and initialization; trained independently, their convolution weights can diverge. The architectural changes are in the hidden layer.
 
 The main question is whether dendritic branches help because they receive fewer inputs, because they apply their own nonlinearity, or both. A second experiment tests this in an MLP on raw pixels, following the random-sampling model of Chavlis & Poirazi (2025).
 
@@ -27,7 +27,7 @@ The dendritic MLP also reached close to the accuracy of the fully connected MLP 
 | MLP, sparse linear branches | 51.63 ± 0.33% |
 | MLP, sparse nonlinear branches | 52.67 ± 0.69% |
 
-Values are mean ± standard deviation over seeds 1, 2 and 3, from [model_comparison.csv](results/tables/model_comparison.csv). CNNs and MLPs have different architectures; the branch controls should be compared within each setting. Seed-by-seed differences are summarized in [paired_comparison.csv](results/tables/paired_comparison.csv).
+Values are mean ± standard deviation over seeds 1, 2 and 3, from [model_comparison.csv](results/tables/model_comparison.csv). CNNs and MLPs differ in input representation, architecture, activation function and branch count. The opposite effects observed in these configurations do not isolate a single mechanism; the branch controls should be compared within each setting. Seed-by-seed differences are summarized in [paired_comparison.csv](results/tables/paired_comparison.csv).
 
 A few other observations:
 
@@ -101,7 +101,7 @@ With fewer training images, the epoch limit and patience scale inversely with th
 
 Early runs used fixed limits of 15 and then 30 CNN epochs. Some models were still improving near the limit, so the final runs use early stopping. Earlier results remain in the Git history. The MLP training schedule also differs from the paper's fixed 50 epochs.
 
-Noise evaluation adds Gaussian noise at standard deviations of 0, 0.25, 0.5, 1.0 and 1.5 in normalized image space, using the same noise across models. Representation analysis measures active and inactive units, class selectivity and similarity between class representational dissimilarity matrices.
+Noise evaluation adds Gaussian noise at standard deviations of 0, 0.25, 0.5, 1.0 and 1.5 in normalized image space, using the same noise across models. Representation analysis measures positive activity, class selectivity and similarity between class representational dissimilarity matrices. `active_fraction` is the fraction of positive activations; `dead_fraction` means “fraction never positive on the evaluation set”. The latter does not establish that neurons are nonfunctional: MLP LeakyReLU neurons can carry information through negative activations.
 
 ## Running the project
 
@@ -127,9 +127,9 @@ bash scripts/run_all.sh
 bash scripts/run_dendrite_study.sh
 ```
 
-Both scripts skip training runs that already have a saved checkpoint. On macOS, prefix a command with `caffeinate -i` to keep the machine awake. Training currently uses Apple MPS when available and CPU otherwise.
+Both scripts use `--skip-existing` to skip runs only when checkpoint settings, source SHA-256 and recorded environment match. Missing provenance (including legacy checkpoints) or a mismatch triggers fresh training and replaces that run’s outputs. Direct `train.py` commands always retrain unless `--skip-existing` is supplied. On macOS, prefix a command with `caffeinate -i` to keep the machine awake. Training and analyses select NVIDIA CUDA first, then Apple MPS, then CPU.
 
-CIFAR-10 is downloaded automatically into `data/`. Trained weights are saved in `results/models/`; neither directory is included in Git. Tables and figures from the completed runs are included.
+CIFAR-10 is downloaded automatically into `data/`. Checkpoints in `results/models/` store weights, training settings, source SHA-256, Git revision, Python/PyTorch versions, device and CUDA version. The source hash includes uncommitted source changes; matching uses the hash rather than the Git revision. These records help track provenance but do not guarantee identical results across hardware. Analyses also accept older weights-only checkpoints; neither directory is included in Git. Tables and figures from the completed runs are included.
 
 To regenerate tables and figures from the existing results:
 

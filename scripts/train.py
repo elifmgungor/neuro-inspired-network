@@ -9,6 +9,7 @@ Examples:
     python3 scripts/train.py baseline 1
     python3 scripts/train.py dendritic 1 10    (only 10% of the training images)
 '''
+import argparse
 import copy
 import sys
 from pathlib import Path
@@ -17,6 +18,7 @@ import torch
 
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root/'src'))
+from neuroinspired.checkpoints import checkpoint_matches, run_metadata, select_device
 from neuroinspired.data import load_cifar10
 from neuroinspired.models import build_model
 from neuroinspired.training import train_one_epoch, evaluate
@@ -30,9 +32,14 @@ PATIENCE = 10
 LEARNING_RATE = 1e-3
 
 def main():
-    model_name = sys.argv[1]
-    seed = int(sys.argv[2])
-    train_percent = int(sys.argv[3]) if len(sys.argv) > 3 else 100
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('model')
+    parser.add_argument('seed', type=int)
+    parser.add_argument('train_percent', type=int, nargs='?', default=100, choices=range(1, 101))
+    parser.add_argument('--skip-existing', action='store_true',
+                        help='Skip only when checkpoint provenance matches this run')
+    args = parser.parse_args()
+    model_name, seed, train_percent = args.model, args.seed, args.train_percent
     run_name = get_run_name(model_name, train_percent, seed)
 
     # With less data an epoch has fewer weight updates, so allow proportionally more epochs
@@ -41,10 +48,22 @@ def main():
     patience = PATIENCE * 100 // train_percent
 
     torch.manual_seed(seed)
-    device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    device = select_device()
+    config = {'model': model_name, 'seed': seed, 'train_percent': train_percent,
+              'max_epochs': max_epochs, 'patience': patience, 'learning_rate': LEARNING_RATE,
+              'optimizer': 'Adam', 'batch_size': 128, 'n_validation': 5000}
+    metadata = run_metadata(project_root, config, device)
+    model_file = project_root / 'results/models' / f'{run_name}.pt'
+    if args.skip_existing and checkpoint_matches(model_file, metadata):
+        print(f'Skipping {run_name}: matching checkpoint provenance')
+        return
+    if args.skip_existing and model_file.exists():
+        print(f'Retraining {run_name}: checkpoint provenance missing or changed')
 
     # 1. Data
-    train_loader, validation_loader, test_loader = load_cifar10(project_root/'data', train_percent, random_state=seed)
+    train_loader, validation_loader, test_loader = load_cifar10(
+        project_root/'data', train_percent, random_state=seed,
+        batch_size=config['batch_size'], n_validation=config['n_validation'])
 
     # 2. Model and optimizer
     model = build_model(model_name).to(device)
@@ -59,7 +78,7 @@ def main():
     # The model of the epoch with the highest validation accuracy is kept,
     # so later epochs where the network starts to memorize the training images are not used.
     history = []
-    best_accuracy, best_epoch = 0, 0
+    best_accuracy, best_epoch = -1, 0
     for epoch in range(1, max_epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, device)
         validation = evaluate(model, validation_loader, device)
@@ -89,7 +108,8 @@ def main():
 
     models_directory = project_root/'results/models'
     models_directory.mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), models_directory/f'{run_name}.pt')
+    torch.save({'model_state_dict': model.state_dict(), 'metadata': metadata,
+                'best_epoch': best_epoch, 'best_validation_accuracy': float(best_accuracy)}, model_file)
     print('Results saved to', project_root/'results')
 
 if __name__ == "__main__":
